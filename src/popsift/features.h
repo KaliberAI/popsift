@@ -16,6 +16,13 @@ namespace popsift {
 
 struct Descriptor; // float features[128];
 
+struct Match {
+    int x;
+    int y;
+    int z;
+};
+
+/* This is a data structure that is returned to a calling program.
 /**
  * @brief This is a data structure that is returned to a calling program.
  * The xpos/ypos information in feature is scale-adapted.
@@ -70,6 +77,7 @@ class FeaturesHost : public FeaturesBase
 {
     Feature*     _ext;
     Descriptor*  _ori;
+    int*         _rev;
 
 public:
     FeaturesHost( );
@@ -90,6 +98,7 @@ public:
 
     inline Feature*    getFeatures()    { return _ext; }
     inline Descriptor* getDescriptors() { return _ori; }
+    inline int*        getReverseMap()  { return _rev; }
 
     void print( std::ostream& ostr, bool write_as_uchar ) const;
 
@@ -114,7 +123,7 @@ public:
 
     void reset( int num_ext, int num_ori );
 
-    void match( FeaturesDev* other );
+    void match( FeaturesDev* other, Match* matchOutput = nullptr);
 
     inline Feature*    getFeatures()    { return _ext; }
     inline Descriptor* getDescriptors() { return _ori; }
