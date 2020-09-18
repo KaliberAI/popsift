@@ -39,11 +39,13 @@ FeaturesBase::~FeaturesBase( ) = default;
 FeaturesHost::FeaturesHost( )
     : _ext( nullptr )
     , _ori( nullptr )
+    , _rev( nullptr )
 { }
 
 FeaturesHost::FeaturesHost( int num_ext, int num_ori )
     : _ext( nullptr )
     , _ori( nullptr )
+    , _rev( nullptr )
 {
     reset( num_ext, num_ori );
 }
@@ -52,12 +54,14 @@ FeaturesHost::~FeaturesHost( )
 {
     memalign_free( _ext );
     memalign_free( _ori );
+    memalign_free( _rev );
 }
 
 void FeaturesHost::reset( int num_ext, int num_ori )
 {
     if( _ext != nullptr ) { free( _ext ); _ext = nullptr; }
     if( _ori != nullptr ) { free( _ori ); _ori = nullptr; }
+    if( _rev != nullptr ) { free( _rev ); _ori = nullptr; }
 
     _ext = (Feature*)memalign( getPageSize(), num_ext * sizeof(Feature) );
     if( _ext == nullptr ) {
@@ -71,6 +75,14 @@ void FeaturesHost::reset( int num_ext, int num_ori )
     if( _ori == nullptr ) {
         cerr << __FILE__ << ":" << __LINE__ << " Runtime error:" << endl
              << "    Failed to (re)allocate memory for downloading " << num_ori << " descriptors" << endl;
+        if( errno == EINVAL ) cerr << "    Alignment is not a power of two." << endl;
+        if( errno == ENOMEM ) cerr << "    Not enough memory." << endl;
+        exit( -1 );
+    }
+    _rev = (int*)memalign( getPageSize(), num_ori * sizeof(int) );
+    if( _rev == nullptr ) {
+        cerr << __FILE__ << ":" << __LINE__ << " Runtime error:" << endl
+             << "    Failed to (re)allocate memory for downloading " << num_ori << " reverse map" << endl;
         if( errno == EINVAL ) cerr << "    Alignment is not a power of two." << endl;
         if( errno == ENOMEM ) cerr << "    Not enough memory." << endl;
         exit( -1 );
@@ -99,12 +111,21 @@ void FeaturesHost::pin( )
              << "    Memory size requested: " << getDescriptorCount() * sizeof(Descriptor) << endl
              << "    " << cudaGetErrorString(err) << endl;
     }
+    err = cudaHostRegister( _rev, getDescriptorCount() * sizeof(int), 0 );
+    if( err != cudaSuccess ) {
+        cerr << __FILE__ << ":" << __LINE__ << " Runtime warning:" << endl
+             << "    Failed to register rev map memory in CUDA." << endl
+             << "    Descriptors count: " << getDescriptorCount() << endl
+             << "    Memory size requested: " << getDescriptorCount() * sizeof(Descriptor) << endl
+             << "    " << cudaGetErrorString(err) << endl;
+    }
 }
 
 void FeaturesHost::unpin( )
 {
     cudaHostUnregister( _ext );
     cudaHostUnregister( _ori );
+    cudaHostUnregister( _rev );
 }
 
 void FeaturesHost::print( std::ostream& ostr, bool write_as_uchar ) const
@@ -261,7 +282,7 @@ show_distance( int3*       match_matrix,
     }
 }
 
-void FeaturesDev::match( FeaturesDev* other )
+void FeaturesDev::match( FeaturesDev* other, Match* matchOutput )
 {
     int l_len = getDescriptorCount( );
     int r_len = other->getDescriptorCount( );
@@ -282,18 +303,21 @@ void FeaturesDev::match( FeaturesDev* other )
         ( match_matrix, getDescriptors(), l_len, other->getDescriptors(), r_len );
 
     POP_SYNC_CHK;
+    if (matchOutput) {
+        cudaMemcpy(matchOutput, match_matrix, l_len * sizeof(int3), cudaMemcpyDeviceToHost);
+    }
 
-    show_distance
-        <<<1,32>>>
-        ( match_matrix,
-          getFeatures(),
-          getDescriptors(),
-          getReverseMap(),
-          l_len,
-          other->getFeatures(),
-          other->getDescriptors(),
-          other->getReverseMap(),
-          r_len );
+//    show_distance
+//        <<<1,32>>>
+//        ( match_matrix,
+//          getFeatures(),
+//          getDescriptors(),
+//          getReverseMap(),
+//          l_len,
+//          other->getFeatures(),
+//          other->getDescriptors(),
+//          other->getReverseMap(),
+//          r_len );
 
     POP_SYNC_CHK;
 
