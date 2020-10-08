@@ -310,7 +310,7 @@ void FeaturesDev::match( FeaturesDev* other, Match* matchOutput )
     cudaFree( match_matrix );
 }
 
-int3* FeaturesDev::match(FeaturesDev* other)
+int3* FeaturesDev::match(FeaturesDev* other, cudaStream_t cudaStream)
 {
     int l_len = getDescriptorCount( );
     int r_len = other->getDescriptorCount( );
@@ -327,12 +327,32 @@ int3* FeaturesDev::match(FeaturesDev* other)
     block.z = 1;
 
     compute_distance
-    <<<grid,block>>>
+    <<<grid,block, 0, cudaStream>>>
       ( match_matrix, getDescriptors(), l_len, other->getDescriptors(), r_len );
 
     POP_SYNC_CHK;
 
     return match_matrix;
+}
+
+void FeaturesDev::match(FeaturesDev* other, int3* matchMatrix, cudaStream_t cudaStream)
+{
+    int l_len = getDescriptorCount();
+    int r_len = other->getDescriptorCount();
+
+    dim3 grid;
+    grid.x = l_len;
+    grid.y = 1;
+    grid.z = 1;
+    dim3 block;
+    block.x = 32;
+    block.y = 1;
+    block.z = 1;
+
+    compute_distance<<<grid, block, 0, cudaStream>>>(
+      matchMatrix, getDescriptors(), l_len, other->getDescriptors(), r_len);
+
+    POP_SYNC_CHK;
 }
 
 /*************************************************************
