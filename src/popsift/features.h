@@ -124,7 +124,8 @@ public:
     void reset( int num_ext, int num_ori );
 
     void match( FeaturesDev* other, Match* matchOutput );
-    int3* match( FeaturesDev* other );
+    int3* match( FeaturesDev* other, cudaStream_t stream = nullptr );
+    void match( FeaturesDev* other, int3* matchMatrix, cudaStream_t stream = nullptr);
 
     inline Feature*    getFeatures()    { return _ext; }
     inline Descriptor* getDescriptors() { return _ori; }
