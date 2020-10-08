@@ -1,7 +1,7 @@
 # CMake below 3.4 does not work with CUDA separable compilation at all
 cmake_minimum_required(VERSION 3.12)
 
-project(PopSift VERSION 1.0.0 LANGUAGES CXX)
+project(PopSift VERSION 1.1.0 LANGUAGES CXX)
 
 # Set build path as a folder named as the platform (linux, windows, darwin...) plus the processor type
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
