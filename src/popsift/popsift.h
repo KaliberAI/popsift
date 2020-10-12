@@ -59,7 +59,7 @@ public:
      * @param[in] h the height in pixel of the image
      * @param[in] imageData the image buffer
      */
-    SiftJob( int w, int h, const unsigned char* imageData );
+    SiftJob( int w, int h, unsigned char* imageData );
 
     /**
      * @brief Constructor for float images, value range [0..1[
@@ -124,8 +124,10 @@ public:
     {
         ///  byte image, value range 0..255
         ByteImages,
+        ByteImagesDev,
         /// float images, value range [0..1[
-        FloatImages
+        FloatImages,
+        FloatImagesDev,
     };
 
     /**
@@ -191,7 +193,7 @@ public:
      *  2D linear textures on this card. This is used to load the image
      *  into the first level of the first octave.
      *  For the second part of the tst, two value of the configuration
-     *  are important: 
+     *  are important:
      *  "downsampling", because it determines the required texture size
      *  after loading. The CUDA 2D layered texture must support the
      *  scaled width and height.
@@ -232,7 +234,7 @@ public:
      */
     SiftJob*  enqueue( int                  w,
                        int                  h,
-                       const unsigned char* imageData );
+                       unsigned char* imageData );
 
     /**
      * @brief Enqueue a float image,  value range [0,1].
@@ -263,7 +265,7 @@ public:
     /**
      * @deprecated
      */
-    inline popsift::FeaturesBase* execute( int /*pipe*/, const unsigned char* imageData )
+    inline popsift::FeaturesBase* execute( int /*pipe*/, unsigned char* imageData )
     {
         SiftJob* j = enqueue( _last_init_w, _last_init_h, imageData );
         if( !j ) return nullptr;
