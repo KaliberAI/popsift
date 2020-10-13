@@ -408,13 +408,10 @@ SiftJob::SiftJob( int w, int h, const float* imageData )
 
 SiftJob::~SiftJob( )
 {
-
     cudaPointerAttributes attributes{};
     cudaPointerGetAttributes(&attributes, _imageData);
 
-    if (attributes.type == cudaMemoryTypeDevice) {
-        cudaFree(_imageData);
-    } else {
+    if (attributes.type == cudaMemoryTypeHost) {
         free( _imageData );
     }
 }
