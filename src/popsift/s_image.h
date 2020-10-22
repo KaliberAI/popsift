@@ -105,6 +105,42 @@ private:
 };
 
 /*************************************************************
+ * ImageDev
+ *************************************************************/
+
+struct ImageDev : public ImageBase
+{
+    ImageDev( );
+
+    /** Create a device-sided buffer of the given dimensions */
+    ImageDev( int w, int h );
+
+    ~ImageDev( ) override;
+
+    /** Reallocation that takes care of pitch when new dimensions
+     *  are smaller and actually reallocation when they are bigger.
+     */
+    void resetDimensions( int w, int h ) override;
+
+    /* This loading function copies all image data to a local
+     * buffer that is pinned in memory. We should offer two
+     * other functions: one that take a device-sided buffer
+     * if the image is already uploaded, and one that takes
+     * an image in pinned memory.
+     */
+    void load( void* input ) override;
+
+  private:
+    void allocate( int w, int h ) override;
+    void createTexture( ) override;
+    void destroyTexture( ) override;
+
+  private:
+    /* 2D plane holding input image on device for upscaling */
+    Plane2D_uint8 _input_image_d;
+};
+
+/*************************************************************
  * ImageFloat
  *************************************************************/
 
@@ -141,6 +177,27 @@ private:
     Plane2D_float _input_image_h;
 
     /* 2D plane holding input image on device for upscaling */
+    Plane2D_float _input_image_d;
+};
+
+struct ImageFloatDev : ImageBase
+{
+    ImageFloatDev ();
+
+    ImageFloatDev(int w, int h);
+
+    ~ImageFloatDev() override;
+
+    void resetDimensions(int w, int h) override;
+
+    void load(void* input) override;
+
+private:
+    void allocate(int w, int h) override;
+    void createTexture ( ) override;
+    void destroyTexture ( ) override;
+
+private:
     Plane2D_float _input_image_d;
 };
 

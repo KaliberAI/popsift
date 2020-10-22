@@ -27,10 +27,20 @@ PopSift::PopSift( const popsift::Config& config, popsift::Config::ProcessingMode
         _pipe._unused.push( new popsift::Image);
         _pipe._unused.push( new popsift::Image);
     }
-    else
+    else if( imode == FloatImages)
     {
         _pipe._unused.push( new popsift::ImageFloat );
         _pipe._unused.push( new popsift::ImageFloat );
+    }
+    else if( imode == ByteImagesDev)
+    {
+        _pipe._unused.push( new popsift::ImageDev );
+        _pipe._unused.push( new popsift::ImageDev );
+    }
+    else
+    {
+        _pipe._unused.push( new popsift::ImageFloatDev );
+        _pipe._unused.push( new popsift::ImageFloatDev );
     }
 
     configure( config, true );
@@ -50,10 +60,20 @@ PopSift::PopSift( ImageMode imode )
         _pipe._unused.push( new popsift::Image);
         _pipe._unused.push( new popsift::Image);
     }
-    else
+    else if( imode == FloatImages)
     {
         _pipe._unused.push( new popsift::ImageFloat );
         _pipe._unused.push( new popsift::ImageFloat );
+    }
+    else if( imode == ByteImagesDev)
+    {
+        _pipe._unused.push( new popsift::ImageDev );
+        _pipe._unused.push( new popsift::ImageDev );
+    }
+    else
+    {
+        _pipe._unused.push( new popsift::ImageFloatDev );
+        _pipe._unused.push( new popsift::ImageFloatDev );
     }
 
     _pipe._thread_stage1.reset( new std::thread( &PopSift::uploadImages, this ));
@@ -225,9 +245,9 @@ std::string PopSift::testTextureFitErrorString( AllocTest err, int width, int he
 
 SiftJob* PopSift::enqueue( int                  w,
                            int                  h,
-                           const unsigned char* imageData )
+                           unsigned char* imageData )
 {
-    if( _image_mode != ByteImages )
+    if( _image_mode != ByteImages && _image_mode != ByteImagesDev)
     {
         cerr << __FILE__ << ":" << __LINE__ << " Image mode error" << endl
              << "E    Cannot load byte images into a PopSift pipeline configured for float images" << endl;
@@ -251,7 +271,7 @@ SiftJob* PopSift::enqueue( int          w,
                            int          h,
                            const float* imageData )
 {
-    if( _image_mode != FloatImages )
+    if( _image_mode != FloatImages && _image_mode != FloatImagesDev )
     {
         cerr << __FILE__ << ":" << __LINE__ << " Image mode error" << endl
              << "E    Cannot load float images into a PopSift pipeline configured for byte images" << endl;
@@ -338,24 +358,32 @@ void PopSift::matchPrepareLoop( )
     }
 }
 
-SiftJob::SiftJob( int w, int h, const unsigned char* imageData )
+SiftJob::SiftJob( int w, int h, unsigned char* imageData )
     : _w(w)
     , _h(h)
     , _img(nullptr)
 {
     _f = _p.get_future();
 
-    _imageData = (unsigned char*)malloc( w*h );
-    if( _imageData != nullptr )
-    {
-        memcpy( _imageData, imageData, w*h );
+    cudaPointerAttributes attributes{};
+    cudaPointerGetAttributes(&attributes, imageData);
+
+    if (attributes.type == cudaMemoryTypeDevice) {
+        _imageData = imageData;
+    } else if(attributes.type == cudaMemoryTypeHost) {
+        _imageData = (unsigned char*)malloc( w*h );
+        if( _imageData != nullptr )
+        {
+            memcpy( _imageData, imageData, w*h );
+        }
+        else
+        {
+            cerr << __FILE__ << ":" << __LINE__ << " Memory limitation" << endl
+                 << "E    Failed to allocate memory for SiftJob" << endl;
+            exit( -1 );
+        }
     }
-    else
-    {
-        cerr << __FILE__ << ":" << __LINE__ << " Memory limitation" << endl
-             << "E    Failed to allocate memory for SiftJob" << endl;
-        exit( -1 );
-    }
+
 }
 
 SiftJob::SiftJob( int w, int h, const float* imageData )
@@ -380,7 +408,12 @@ SiftJob::SiftJob( int w, int h, const float* imageData )
 
 SiftJob::~SiftJob( )
 {
-    free( _imageData );
+    cudaPointerAttributes attributes{};
+    cudaPointerGetAttributes(&attributes, _imageData);
+
+    if (attributes.type == cudaMemoryTypeHost) {
+        free( _imageData );
+    }
 }
 
 void SiftJob::setImg( popsift::ImageBase* img )
