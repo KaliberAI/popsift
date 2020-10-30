@@ -353,12 +353,12 @@ void Pyramid::clone_device_descriptors_sub( const Config& conf, FeaturesDev* fea
 FeaturesDev* Pyramid::clone_device_descriptors( const Config& conf )
 {
     readDescCountersFromDevice();
-
     FeaturesDev* features = new FeaturesDev( hct.ext_total, hct.ori_total );
 
-    clone_device_descriptors_sub( conf, features );
-
-    cudaStreamSynchronize( _download_stream );
+    if (hct.ext_total != 0 && hct.ori_total != 0) {
+        clone_device_descriptors_sub( conf, features );
+        cudaStreamSynchronize( _download_stream );
+    }
 
     return features;
 }
