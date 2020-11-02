@@ -370,7 +370,7 @@ SiftJob::SiftJob( int w, int h, unsigned char* imageData )
 
     if (attributes.type == cudaMemoryTypeDevice) {
         _imageData = imageData;
-    } else if(attributes.type == cudaMemoryTypeHost) {
+    } else if (attributes.type == cudaMemoryTypeUnregistered) {
         _imageData = (unsigned char*)malloc( w*h );
         if( _imageData != nullptr )
         {
@@ -382,6 +382,10 @@ SiftJob::SiftJob( int w, int h, unsigned char* imageData )
                  << "E    Failed to allocate memory for SiftJob" << endl;
             exit( -1 );
         }
+    } else {
+        cerr << __FILE__ << ":" << __LINE__ << " Unsupported memory type: " << attributes.type << endl;
+        cerr << "\t from https://docs.nvidia.com/cuda/cuda-runtime-api/structcudaPointerAttributes.html" << endl;
+        exit( -1 );
     }
 
 }
